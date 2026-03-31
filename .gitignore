@@ -1,0 +1,10 @@
+# rust ignore
+/target/
+Cargo.lock
+**/*.rs.bk
+
+# project files
+/outputs
+.browsectl
+chromedriver*
+edgewebdriver*

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>browsectl Test Page</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 2rem;
+            }
+            #result {
+                margin-top: 1rem;
+                padding: 0.5rem;
+                border: 1px solid #ccc;
+                min-height: 1.5em;
+            }
+            #scroll-spacer {
+                height: 3000px;
+                background: linear-gradient(to bottom, #ffffff, #aaccff);
+            }
+            #scroll-target {
+                padding: 1rem;
+                background: #0074d9;
+                color: #fff;
+            }
+            .hidden {
+                display: none;
+            }
+            .chat-input-container {
+                border: 1px solid #ccc;
+                padding: 10px;
+                margin-top: 20px;
+            }
+            .chat-input-wrapper {
+                position: relative;
+                border: 1px solid #000;
+                padding: 5px;
+            }
+            .chat-input-placeholder {
+                position: absolute;
+                top: 5px;
+                left: 5px;
+                color: #999;
+                pointer-events: none;
+            }
+            .chat-input-editor {
+                min-height: 50px;
+                outline: none;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="heading">Hello World</h1>
+
+        <div id="ai-chat-scenarios">
+            <!-- Scenario 1: Model Selection and Text Generation -->
+            <div id="model-scen-1" class="chat-input-container">
+                <div class="model-selector" style="margin-bottom: 10px">
+                    <button class="model-btn active">Models</button>
+                    <button class="model-btn">Image Generation</button>
+                </div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-input-placeholder">
+                        Enter your prompt...
+                    </div>
+                    <div
+                        class="chat-input-editor"
+                        contenteditable="true"
+                        data-testid="chat-input-v1"
+                    ></div>
+                </div>
+                <button id="send-btn-1" style="margin-top: 5px">Send</button>
+            </div>
+
+            <!-- Scenario 2: Nested Scope with similar classes -->
+            <div
+                id="model-scen-2"
+                class="chat-input-container"
+                style="position: relative"
+            >
+                <div class="model-selector" style="margin-bottom: 10px">
+                    <button class="model-btn">High Quality Model</button>
+                </div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-input-placeholder">
+                        Describe your video...
+                    </div>
+                    <div
+                        class="chat-input-editor"
+                        contenteditable="true"
+                        data-testid="chat-input-v2"
+                    ></div>
+                </div>
+                <button id="send-btn-2" style="margin-top: 5px">
+                    Generate Video
+                </button>
+                <div
+                    id="overlay-2"
+                    style="
+                        position: absolute;
+                        inset: 0;
+                        background: rgba(0, 0, 0, 0.01);
+                        pointer-events: auto;
+                    "
+                ></div>
+            </div>
+        </div>
+
+        <form id="test-form" onsubmit="return false;">
+            <div>
+                <label for="name-input">Name:</label>
+                <input id="name-input" type="text" placeholder="Enter name" />
+            </div>
+            <div style="margin-top: 0.5rem">
+                <label for="message">Message:</label>
+                <textarea
+                    id="message"
+                    placeholder="Enter message"
+                    rows="3"
+                    cols="40"
+                ></textarea>
+            </div>
+            <div style="margin-top: 0.5rem">
+                <button id="submit-btn" type="button">Submit</button>
+                <button id="toggle-btn" type="button">Toggle Hidden</button>
+            </div>
+        </form>
+
+        <div id="result"></div>
+        <div id="hidden-box" class="hidden">Now you see me!</div>
+
+        <div id="scroll-spacer"></div>
+        <div id="scroll-target">Bottom of page</div>
+
+        <script>
+            document
+                .getElementById("submit-btn")
+                .addEventListener("click", function () {
+                    var name = document.getElementById("name-input").value;
+                    var msg = document.getElementById("message").value;
+                    document.getElementById("result").textContent =
+                        "Submitted: name=" + name + ", message=" + msg;
+                    document.getElementById("heading").textContent =
+                        "Form Submitted";
+                });
+
+            document
+                .getElementById("toggle-btn")
+                .addEventListener("click", function () {
+                    var box = document.getElementById("hidden-box");
+                    box.classList.toggle("hidden");
+                });
+
+            function setResult(text) {
+                document.getElementById("result").textContent = text;
+            }
+
+            function bindClick(id, text) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener("click", function () {
+                    setResult(text);
+                });
+            }
+
+            window.addEventListener("DOMContentLoaded", function () {
+                bindClick("scope-a-fallback", "scope-a-fallback");
+                bindClick("scope-b-fallback", "scope-b-fallback");
+
+                // New AI Chat Scenario Listeners
+                bindClick("send-btn-1", "Prompt Sent 1");
+                bindClick("send-btn-2", "Prompt Sent 2");
+
+                const editor1 = document.querySelector(
+                    '[data-testid="chat-input-v1"]',
+                );
+                const placeholder1 = editor1.parentElement.querySelector(
+                    ".chat-input-placeholder",
+                );
+                editor1.addEventListener("input", function () {
+                    placeholder1.style.display =
+                        editor1.textContent.length > 0 ? "none" : "block";
+                });
+
+                const editor2 = document.querySelector(
+                    '[data-testid="chat-input-v2"]',
+                );
+                const placeholder2 = editor2.parentElement.querySelector(
+                    ".chat-input-placeholder",
+                );
+                editor2.addEventListener("input", function () {
+                    placeholder2.style.display =
+                        editor2.textContent.length > 0 ? "none" : "block";
+                });
+            });
+        </script>
+
+        <!-- Click-intercept test scenario -->
+        <div
+            id="click-intercept-area"
+            style="
+                position: relative;
+                width: 220px;
+                height: 220px;
+                margin-top: 2rem;
+                border: 1px solid #999;
+            "
+        >
+            <div
+                data-testid="qrcode_image"
+                id="qrcode-target"
+                style="
+                    width: 160px;
+                    height: 160px;
+                    margin: 30px auto;
+                    background: #eee;
+                    text-align: center;
+                    line-height: 160px;
+                "
+            >
+                QR Code
+            </div>
+            <div
+                data-testid="qrcode_sibling"
+                id="qrcode-sibling"
+                style="
+                    text-align: center;
+                    margin-top: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                "
+            >
+                Refresh QR
+            </div>
+            <!-- Overlay that intercepts clicks on qrcode_image -->
+            <div
+                id="click-overlay"
+                style="
+                    position: absolute;
+                    inset: 0;
+                    background: rgba(255, 0, 0, 0.08);
+                    z-index: 10;
+                    pointer-events: auto;
+                "
+            ></div>
+        </div>
+
+        <!-- Scope + regex + fallback test scenario -->
+        <div
+            id="scope-a"
+            style="
+                position: relative;
+                width: 220px;
+                height: 220px;
+                margin-top: 2rem;
+                border: 1px dashed #999;
+            "
+        >
+            <div
+                data-testid="scope_qrcode_image"
+                id="scope-a-target"
+                style="
+                    width: 160px;
+                    height: 160px;
+                    margin: 30px auto;
+                    background: #eef;
+                    text-align: center;
+                    line-height: 160px;
+                "
+            >
+                QR Code
+            </div>
+            <div
+                data-testid="scope_qrcode_sibling"
+                id="scope-a-fallback"
+                style="
+                    text-align: center;
+                    margin-top: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                "
+            >
+                Refresh QR
+            </div>
+            <div
+                style="
+                    position: absolute;
+                    inset: 0;
+                    z-index: 10;
+                    pointer-events: auto;
+                    background: rgba(0, 120, 255, 0.06);
+                "
+            ></div>
+        </div>
+
+        <div
+            id="scope-b"
+            style="
+                position: relative;
+                width: 220px;
+                height: 220px;
+                margin-top: 1rem;
+                border: 1px dashed #999;
+            "
+        >
+            <div
+                data-testid="scope_qrcode_image"
+                id="scope-b-target"
+                style="
+                    width: 160px;
+                    height: 160px;
+                    margin: 30px auto;
+                    background: #efe;
+                    text-align: center;
+                    line-height: 160px;
+                "
+            >
+                QR Code
+            </div>
+            <div
+                data-testid="scope_qrcode_sibling"
+                id="scope-b-fallback"
+                style="
+                    text-align: center;
+                    margin-top: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                "
+            >
+                Refresh QR
+            </div>
+            <div
+                style="
+                    position: absolute;
+                    inset: 0;
+                    z-index: 10;
+                    pointer-events: auto;
+                    background: rgba(0, 120, 255, 0.06);
+                "
+            ></div>
+        </div>
+    </body>
+</html>

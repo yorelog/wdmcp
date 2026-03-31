@@ -1,0 +1,5 @@
+[
+  { "type": "open", "url": "https://example.com" },
+  { "type": "title" },
+  { "type": "wait", "selector": "h1", "condition": "visible", "timeout": 10000 }
+]
