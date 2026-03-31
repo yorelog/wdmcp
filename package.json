@@ -1,6 +1,6 @@
 {
   "name": "@yorelog/browsectl",
-  "version": "0.1.0",
+  "version": "0.1.0.1",
   "description": "The Cli for browsectl",
   "bin": {
     "browsectl": "scripts/run.js"
