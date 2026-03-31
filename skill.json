@@ -1,10 +1,12 @@
 {
   "name": "browsectl",
-  "version": "0.1.0",
+  "version": "0.1.0.1",
   "description": "WebDriver automation CLI for AI-driven browser control. Provides session management, tab control, element interaction, screenshots, batch execution, and an interactive REPL.",
   "metadata": {
     "requires": {
-      "bins": ["browsectl"]
+      "bins": [
+        "browsectl"
+      ]
     },
     "cliHelp": "browsectl --help",
     "repository": "https://github.com/yorelog/browsectl",
@@ -56,13 +58,21 @@
         "name": "tabs",
         "file": "skills/tabs.md",
         "description": "Tab management — list, create, switch, and close browser tabs",
-        "commands": ["tab-list", "tab-create", "tab-switch", "tab-close"]
+        "commands": [
+          "tab-list",
+          "tab-create",
+          "tab-switch",
+          "tab-close"
+        ]
       },
       {
         "name": "batch",
         "file": "skills/batch.md",
         "description": "Batch execution — run single commands, sequential batches from JSON files, and parallel groups",
-        "commands": ["run", "batch"]
+        "commands": [
+          "run",
+          "batch"
+        ]
       },
       {
         "name": "selectors",
@@ -73,7 +83,9 @@
         "name": "repl",
         "file": "skills/repl.md",
         "description": "Interactive REPL reference — live command entry, tab-completion, persistent history",
-        "commands": ["repl"]
+        "commands": [
+          "repl"
+        ]
       }
     ]
   }
