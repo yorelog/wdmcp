@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-03-31
+
+### Added
+
+- Helpful error message in `scripts/run.js` when binary is missing (guides pnpm users to approve build scripts).
+
+### Changed
+
+- Replaced `skill.json` with `SKILL.md` markdown skill manifest (npm package validation requirement).
+- Removed `LICENSE` from npm package `files` (non-text file filtering).
+
+### Fixed
+
+- Fixed BSD `sed` compatibility in `scripts/release.sh` for macOS (replaced GNU-only `\s` and multi-line syntax with portable `awk`).
+
 ## [0.1.1] - 2026-03-31
 
 ### Added

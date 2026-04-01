@@ -79,7 +79,7 @@ if [ -f CHANGELOG.md ]; then
       if (index($0, "[" ver "]")) { found=1; next }
     }
     found { print }
-  ' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^\s*$/{ $d; N; ba; }')
+  ' CHANGELOG.md | awk 'NF{found=1} found{lines[++n]=$0} END{while(n>0 && lines[n]=="")n--; for(i=1;i<=n;i++)print lines[i]}')
 fi
 
 if [ -z "$NOTES" ]; then
