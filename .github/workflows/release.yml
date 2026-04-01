@@ -99,16 +99,47 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v5
         with:
           path: artifacts
           merge-multiple: true
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Extract the section for this version from CHANGELOG.md
+          # Matches from "## [VERSION]" until the next "## [" or end of file
+          NOTES=$(awk -v ver="$VERSION" '
+            BEGIN { found=0 }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]")) { found=1; next }
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v${VERSION}"
+          fi
+
+          # Write to file for the release action (avoids delimiter issues)
+          echo "$NOTES" > release-notes.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          generate_release_notes: true
+          body_path: release-notes.md
+          name: v${{ steps.version.outputs.VERSION }}
 
   publish-npm:
     needs: release

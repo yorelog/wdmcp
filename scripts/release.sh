@@ -19,10 +19,10 @@ TAG="v${VERSION}"
 echo "📦 Version from package.json: ${VERSION}"
 
 # ---------------------------------------------------------------------------
-# Sync version into Cargo.toml and skill.json
+# Sync version into Cargo.toml and SKILL.md
 # ---------------------------------------------------------------------------
 CARGO_VERSION=$(sed -n 's/^version *= *"\(.*\)"/\1/p' Cargo.toml | head -1)
-SKILL_VERSION=$(node -p "require('./skill.json').version")
+SKILL_VERSION=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}/\1/p' SKILL.md | head -1)
 
 DIRTY=0
 
@@ -33,14 +33,8 @@ if [ "$CARGO_VERSION" != "$VERSION" ]; then
 fi
 
 if [ "$SKILL_VERSION" != "$VERSION" ]; then
-  echo "🔄 Updating skill.json: ${SKILL_VERSION} → ${VERSION}"
-  node -e "
-    const fs = require('fs');
-    const p = './skill.json';
-    const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-    j.version = '${VERSION}';
-    fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-  "
+  echo "🔄 Updating SKILL.md: ${SKILL_VERSION} → ${VERSION}"
+  sed -i.bak "s/^version: *.*$/version: \"${VERSION}\"/" SKILL.md && rm -f SKILL.md.bak
   DIRTY=1
 fi
 
@@ -49,7 +43,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ "$DIRTY" -eq 1 ]; then
   echo "📝 Committing version sync"
-  git add Cargo.toml skill.json
+  git add Cargo.toml SKILL.md
   git commit -m "chore: sync version to ${VERSION}"
 fi
 
@@ -70,12 +64,44 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 
 # ---------------------------------------------------------------------------
-# Create tag and push
+# Extract release notes from CHANGELOG.md for this version
+#
+# Looks for the section between ## [<VERSION>] and the next ## heading (or EOF).
+# Falls back to a generic message if the section is missing.
+# ---------------------------------------------------------------------------
+NOTES=""
+if [ -f CHANGELOG.md ]; then
+  # Extract lines between "## [VERSION]" and the next "## [" heading
+  NOTES=$(awk -v ver="$VERSION" '
+    BEGIN { found=0 }
+    /^## \[/ {
+      if (found) exit
+      if (index($0, "[" ver "]")) { found=1; next }
+    }
+    found { print }
+  ' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^\s*$/{ $d; N; ba; }')
+fi
+
+if [ -z "$NOTES" ]; then
+  echo "⚠️  No CHANGELOG.md entry found for [${VERSION}], using default message"
+  NOTES="Release ${TAG}"
+fi
+
+echo ""
+echo "📋 Release notes:"
+echo "---"
+echo "$NOTES"
+echo "---"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Create annotated tag with release notes and push
 # ---------------------------------------------------------------------------
 echo "🏷️  Creating tag ${TAG}"
-git tag -a "$TAG" -m "Release ${TAG}"
+git tag -a "$TAG" -m "Release ${TAG}" -m "$NOTES"
 
-echo "🚀 Pushing tag ${TAG} to origin"
+echo "🚀 Pushing commit(s) and tag ${TAG} to origin"
+git push origin HEAD
 git push origin "$TAG"
 
 echo ""

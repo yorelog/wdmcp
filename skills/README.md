@@ -1,6 +1,6 @@
 ---
 name: browsectl
-version: 1.0.1
+version: 0.1.1
 description: "WebDriver automation CLI for AI-driven browser control. Provides session management, tab control, element interaction, screenshots, batch execution, and an interactive REPL."
 metadata:
   requires:
@@ -8,7 +8,7 @@ metadata:
   cliHelp: "browsectl --help"
 ---
 
-# browsectl (1.0.1)
+# browsectl (0.1.1)
 
 > **CRITICAL:** Before doing anything, run `browsectl setup` to detect installed browsers and auto-download the matching WebDriver binary. Sessions persist to `.browsectl/sessions.json` across CLI invocations — you do not need to create a new session every time.
 

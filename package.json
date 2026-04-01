@@ -1,7 +1,7 @@
 {
   "name": "@yorelog/browsectl",
   "version": "0.1.1",
-  "description": "The Cli for browsectl",
+  "description": "WebDriver automation CLI for AI-driven browser control",
   "bin": {
     "browsectl": "scripts/run.js"
   },
@@ -27,10 +27,11 @@
   },
   "license": "MIT",
   "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "SKILL.md",
     "scripts/install.js",
     "scripts/run.js",
-    "skill.json",
-    "skills/",
-    "CHANGELOG.md"
+    "skills/"
   ]
 }
