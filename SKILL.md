@@ -1,6 +1,6 @@
 ---
 name: browsectl
-version: 0.1.1
+version: "0.1.2"
 description: "WebDriver automation CLI for AI-driven browser control. Provides session management, tab control, element interaction, screenshots, batch execution, and an interactive REPL."
 requires:
   bins: ["browsectl"]
