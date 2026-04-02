@@ -1,6 +1,6 @@
 {
   "name": "@yorelog/browsectl",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "WebDriver automation CLI for AI-driven browser control",
   "bin": {
     "browsectl": "scripts/run.js"
