@@ -4,7 +4,8 @@ Cargo.lock
 **/*.rs.bk
 
 # project files
-/outputs
+outputs
+examples
 .browsectl
 chromedriver*
 edgewebdriver*

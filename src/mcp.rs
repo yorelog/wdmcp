@@ -21,6 +21,7 @@ use base64::Engine;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
+use crate::agent;
 use crate::batch;
 use crate::driver;
 use crate::manager;
@@ -37,6 +38,8 @@ fn tool_definitions() -> Value {
     tools.extend(browser_command_tool_defs());
     tools.extend(tab_tool_defs());
     tools.extend(power_user_tool_defs());
+    tools.extend(agent_tool_defs());
+    tools.extend(network_tool_defs());
     Value::Array(tools)
 }
 
@@ -468,6 +471,199 @@ fn tab_tool_defs() -> Vec<Value> {
 }
 
 /// Power-user escape-hatch tools (run_command, run_batch).
+/// Agent intelligence tools — DOM analysis, slot extraction, task recommendation.
+fn agent_tool_defs() -> Vec<Value> {
+    vec![
+        json!({
+            "name": "analyze_page",
+            "description": "Extract all interactive elements (slots) from the current page with safety classification. Returns structured slot data including selectors, categories, safety levels, form membership, and task suggestions. Use this to understand what actions are possible on the current page.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    },
+                    "include_hidden": {
+                        "type": "boolean",
+                        "description": "Include hidden/invisible elements in the analysis. Default: false."
+                    },
+                    "include_suggestions": {
+                        "type": "boolean",
+                        "description": "Include task suggestions grouped from the extracted slots. Default: true."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "suggest_actions",
+            "description": "Get recommended actions for the current page by combining DOM analysis with task memory. Returns a list of suggested tasks the user can perform, ranked by relevance and safety. Useful when the user doesn't know what to do on a page.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    },
+                    "max_suggestions": {
+                        "type": "integer",
+                        "description": "Maximum number of suggestions to return. Default: 5."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+    ]
+}
+
+/// Network monitoring tools — capture, inspect, and filter HTTP traffic.
+fn network_tool_defs() -> Vec<Value> {
+    vec![
+        json!({
+            "name": "network_enable",
+            "description": "Start capturing network traffic on the current page. Injects a JavaScript interceptor that wraps fetch/XHR to record all HTTP requests and responses, and optionally enables CDP Network domain for deeper introspection. Call this before navigating or performing actions whose network activity you want to inspect.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_disable",
+            "description": "Stop capturing network traffic and restore original fetch/XHR functions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_get_log",
+            "description": "Retrieve captured network requests with optional filtering. Returns a structured log of HTTP traffic including method, URL, status, headers, timing, and content metadata. Use filters to narrow results by URL pattern, HTTP method, resource type, or status code.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    },
+                    "url_pattern": {
+                        "type": "string",
+                        "description": "Filter entries whose URL contains this substring."
+                    },
+                    "methods": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Filter by HTTP methods, e.g. [\"GET\", \"POST\"]."
+                    },
+                    "resource_types": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Filter by resource type, e.g. [\"xhr\", \"fetch\", \"script\", \"document\", \"image\", \"stylesheet\"]."
+                    },
+                    "status_min": {
+                        "type": "integer",
+                        "description": "Minimum HTTP status code (inclusive). Use with status_max for range filtering."
+                    },
+                    "status_max": {
+                        "type": "integer",
+                        "description": "Maximum HTTP status code (inclusive)."
+                    },
+                    "has_error": {
+                        "type": "boolean",
+                        "description": "If true, return only failed requests (status >= 400 or status = 0)."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of entries to return."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_get_response_body",
+            "description": "Retrieve the response body of a specific captured network request by its entry ID (e.g. \"net-0\"). The request must have been captured by the network interceptor.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "description": "The entry ID of the request (e.g. \"net-0\", \"net-5\")."
+                    }
+                },
+                "required": ["request_id"],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_clear_log",
+            "description": "Clear all captured network entries. Useful to reset before a new action so you only capture fresh traffic.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_get_resource_timing",
+            "description": "Get resource loading performance timing data from the browser's Performance API. Does NOT require network_enable — works with the browser's built-in performance entries. Returns timing breakdown (DNS, connect, SSL, TTFB, download) for all loaded resources.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "network_get_cookies",
+            "description": "Get all cookies for the current page. Uses CDP Network.getAllCookies when available, with a JavaScript document.cookie fallback.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Target session. Defaults to the current default session."
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }),
+    ]
+}
+
 fn power_user_tool_defs() -> Vec<Value> {
     let cmd_type_enum = json!([
         "open",
@@ -677,7 +873,156 @@ fn build_command_spec(command_type: &str, args: &Value) -> CommandSpec {
 }
 
 // ---------------------------------------------------------------------------
-// Tool handler
+// Extracted helpers for agent / network tools
+// ---------------------------------------------------------------------------
+
+/// Build a [`NetworkFilter`] from the flat JSON args of the `network_get_log` tool.
+fn parse_network_filter(args: &Value) -> agent::network::NetworkFilter {
+    let status_range = match (
+        args.get("status_min").and_then(|v| v.as_u64()),
+        args.get("status_max").and_then(|v| v.as_u64()),
+    ) {
+        (Some(min), Some(max)) => Some((min as u16, max as u16)),
+        (Some(min), None) => Some((min as u16, 599)),
+        (None, Some(max)) => Some((100, max as u16)),
+        (None, None) => None,
+    };
+
+    agent::network::NetworkFilter {
+        url_pattern: args
+            .get("url_pattern")
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        methods: args.get("methods").and_then(|v| {
+            v.as_array().map(|arr| {
+                arr.iter()
+                    .filter_map(|item| item.as_str().map(|s| s.to_uppercase()))
+                    .collect()
+            })
+        }),
+        resource_types: args.get("resource_types").and_then(|v| {
+            v.as_array().map(|arr| {
+                arr.iter()
+                    .filter_map(|item| item.as_str().map(|s| s.to_lowercase()))
+                    .collect()
+            })
+        }),
+        status_range,
+        has_error: args.get("has_error").and_then(|v| v.as_bool()),
+        limit: args
+            .get("limit")
+            .and_then(|v| v.as_u64())
+            .map(|n| n as usize),
+    }
+}
+
+/// Handle the `analyze_page` tool: extract DOM slots, optionally filter hidden,
+/// attach suggestions, and record the visit in memory.
+async fn handle_analyze_page(driver: &crate::webdriver::WdClient, args: &Value) -> Result<Value> {
+    let include_hidden = args
+        .get("include_hidden")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let include_suggestions = args
+        .get("include_suggestions")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let mut analysis = agent::dom::extract_slots(driver).await?;
+
+    // Filter out hidden slots unless requested
+    if !include_hidden {
+        analysis.slots.retain(|s| s.visible);
+        analysis.safety_summary = agent::dom::build_safety_summary(&analysis.slots);
+        analysis.slot_count = analysis.slots.len();
+    }
+
+    let mut result =
+        serde_json::to_value(&analysis).context("failed to serialize page analysis")?;
+
+    if include_suggestions {
+        let suggestions = agent::slots::group_suggestions(&analysis);
+        result["suggestions"] = serde_json::to_value(&suggestions).unwrap_or(json!([]));
+    }
+
+    // Record visit in memory (best-effort, don't fail the tool call)
+    let _ =
+        agent::memory::record_visit(&analysis.url, &analysis.title, analysis.slot_count, vec![])
+            .await;
+
+    Ok(result)
+}
+
+/// Handle the `suggest_actions` tool: analyse the page, enrich with memory
+/// patterns, and return capped suggestions.
+async fn handle_suggest_actions(
+    driver: &crate::webdriver::WdClient,
+    args: &Value,
+) -> Result<Value> {
+    let max_suggestions = args
+        .get("max_suggestions")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(5) as usize;
+
+    // 1. Analyze the current page
+    let mut analysis = agent::dom::extract_slots(driver).await?;
+    analysis.slots.retain(|s| s.visible);
+    analysis.slot_count = analysis.slots.len();
+
+    // 2. Get DOM-based suggestions
+    let mut suggestions = agent::slots::group_suggestions(&analysis);
+
+    // 3. Enrich with memory patterns
+    let memory_patterns = agent::memory::find_patterns(&analysis.url)
+        .await
+        .unwrap_or_default();
+
+    for pattern in &memory_patterns {
+        // Check if this pattern's intent already exists in suggestions
+        let already_exists = suggestions.iter().any(|s| {
+            s.title
+                .to_lowercase()
+                .contains(&pattern.intent.to_lowercase())
+        });
+
+        if !already_exists {
+            suggestions.push(agent::slots::TaskSuggestion {
+                title: format!("{} (from memory)", pattern.intent),
+                description: format!(
+                    "Previously successful task (used {} time{})",
+                    pattern.success_count,
+                    if pattern.success_count == 1 { "" } else { "s" }
+                ),
+                safety_level: agent::slots::SafetyLevel::Interact,
+                slot_ids: vec![],
+                commands: pattern.commands.clone(),
+            });
+        }
+    }
+
+    // 4. Truncate to max
+    suggestions.truncate(max_suggestions);
+
+    // 5. Record visit
+    let _ = agent::memory::record_visit(
+        &analysis.url,
+        &analysis.title,
+        analysis.slot_count,
+        vec!["suggest_actions".to_string()],
+    )
+    .await;
+
+    Ok(json!({
+        "url": analysis.url,
+        "title": analysis.title,
+        "slot_count": analysis.slot_count,
+        "suggestions": suggestions,
+        "memory_patterns_found": memory_patterns.len(),
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Main match dispatcher
 // ---------------------------------------------------------------------------
 
 async fn handle_tool_call(
@@ -1049,6 +1394,116 @@ async fn handle_tool_call(
 
             manager::upsert_runtime(ctx, false).await?;
 
+            Ok(result)
+        }
+
+        // ================================================================
+        // Agent intelligence tools
+        // ================================================================
+
+        // ── analyze_page ───────────────────────────────────────────────
+        "analyze_page" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+            handle_analyze_page(&ctx.driver, args).await
+        }
+
+        // ── suggest_actions ────────────────────────────────────────────
+        "suggest_actions" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+            handle_suggest_actions(&ctx.driver, args).await
+        }
+
+        // ================================================================
+        // Network monitoring tools
+        // ================================================================
+
+        // ── network_enable ─────────────────────────────────────────────
+        "network_enable" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let result = agent::network::enable_network_capture(&ctx.driver).await?;
+            Ok(result)
+        }
+
+        // ── network_disable ────────────────────────────────────────────
+        "network_disable" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let result = agent::network::disable_network_capture(&ctx.driver).await?;
+            Ok(result)
+        }
+
+        // ── network_get_log ────────────────────────────────────────────
+        "network_get_log" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let filter = parse_network_filter(args);
+            let log = agent::network::get_network_log(&ctx.driver, &filter).await?;
+            let result = serde_json::to_value(&log).context("failed to serialize network log")?;
+            Ok(result)
+        }
+
+        // ── network_get_response_body ──────────────────────────────────
+        "network_get_response_body" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let request_id = args
+                .get("request_id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| anyhow::anyhow!("missing required parameter: request_id"))?;
+
+            let result = agent::network::get_response_body(&ctx.driver, request_id).await?;
+            Ok(result)
+        }
+
+        // ── network_clear_log ──────────────────────────────────────────
+        "network_clear_log" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let result = agent::network::clear_network_log(&ctx.driver).await?;
+            Ok(result)
+        }
+
+        // ── network_get_resource_timing ────────────────────────────────
+        "network_get_resource_timing" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let result = agent::network::get_resource_timing(&ctx.driver).await?;
+            Ok(result)
+        }
+
+        // ── network_get_cookies ────────────────────────────────────────
+        "network_get_cookies" => {
+            let sid = resolve_sid(sessions, config, args).await?;
+            let ctx = sessions
+                .get(&sid)
+                .ok_or_else(|| anyhow::anyhow!("session not found: {sid}"))?;
+
+            let result = agent::network::get_cookies(&ctx.driver).await?;
             Ok(result)
         }
 

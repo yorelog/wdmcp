@@ -338,7 +338,115 @@
                     pointer-events: auto;
                     background: rgba(0, 120, 255, 0.06);
                 "
-            ></div>
+            </div>
         </div>
+
+        <!-- Agent test: Login form for slot extraction + safety classification -->
+        <div id="agent-test-section" style="margin-top: 2rem; padding: 1rem; border: 2px solid #333;">
+            <h2>Agent Test Section</h2>
+
+            <form id="login-form" action="/api/login" method="POST" onsubmit="return false;">
+                <div>
+                    <label for="login-user">Username:</label>
+                    <input id="login-user" name="username" type="text" placeholder="Enter username" aria-label="Username" />
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <label for="login-pass">Password:</label>
+                    <input id="login-pass" name="password" type="password" placeholder="Enter password" aria-label="Password" />
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <button id="login-submit" type="submit">Sign In</button>
+                </div>
+            </form>
+
+            <!-- Search bar (not inside the login form — for search suggestion detection) -->
+            <div id="search-section" style="margin-top: 1rem;">
+                <input id="search-input" name="q" type="text" placeholder="Search..." aria-label="Search" />
+                <button id="search-btn">Search</button>
+            </div>
+
+            <!-- Navigation links -->
+            <nav id="test-nav" style="margin-top: 1rem;">
+                <a href="#about" id="nav-about">About</a>
+                <a href="#products" id="nav-products">Products</a>
+                <a href="#contact" id="nav-contact">Contact</a>
+            </nav>
+
+            <!-- Danger zone: destructive buttons for safety classification -->
+            <div id="danger-zone" style="margin-top: 1rem; padding: 0.5rem; border: 1px solid red;">
+                <button id="delete-btn" data-testid="delete-account">Delete Account</button>
+                <button id="purchase-btn">购买</button>
+                <button id="view-details-btn">View Details</button>
+            </div>
+
+            <!-- Role-based elements -->
+            <div id="role-test">
+                <div role="button" id="role-btn" tabindex="0" style="cursor: pointer; padding: 4px; border: 1px solid #999; display: inline-block;">Role Button</div>
+                <div role="link" id="role-link" tabindex="0" style="cursor: pointer; color: blue; text-decoration: underline; display: inline-block;">Role Link</div>
+            </div>
+
+            <!-- Checkbox + radio for interact-level testing -->
+            <div id="options-section" style="margin-top: 0.5rem;">
+                <label><input type="checkbox" name="agree" id="agree-cb" /> I agree</label>
+                <label><input type="radio" name="plan" value="free" id="plan-free" /> Free</label>
+                <label><input type="radio" name="plan" value="pro" id="plan-pro" /> Pro</label>
+                <select id="country-select" name="country">
+                    <option value="">Select country</option>
+                    <option value="us">United States</option>
+                    <option value="cn">China</option>
+                </select>
+            </div>
+
+            <!-- Hidden element for include_hidden testing -->
+            <input type="hidden" name="csrf" value="token123" id="csrf-hidden" />
+        </div>
+
+        <!-- Network test: XHR/fetch trigger buttons -->
+        <div id="network-test-section" style="margin-top: 2rem; padding: 1rem; border: 2px solid #069;">
+            <h2>Network Test Section</h2>
+            <button id="fetch-btn" onclick="doFetch()">Trigger Fetch</button>
+            <button id="xhr-btn" onclick="doXhr()">Trigger XHR</button>
+            <button id="fetch-post-btn" onclick="doFetchPost()">Trigger POST</button>
+            <div id="net-result"></div>
+        </div>
+
+        <script>
+            // Network test helpers
+            function doFetch() {
+                fetch('https://httpbin.org/get?test=browsectl')
+                    .then(function(r) { return r.text(); })
+                    .then(function(t) {
+                        document.getElementById('net-result').textContent = 'fetch ok: ' + t.substring(0, 50);
+                    })
+                    .catch(function(e) {
+                        document.getElementById('net-result').textContent = 'fetch error: ' + e;
+                    });
+            }
+            function doXhr() {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'https://httpbin.org/user-agent');
+                xhr.onload = function() {
+                    document.getElementById('net-result').textContent = 'xhr ok: ' + xhr.responseText.substring(0, 50);
+                };
+                xhr.onerror = function() {
+                    document.getElementById('net-result').textContent = 'xhr error';
+                };
+                xhr.send();
+            }
+            function doFetchPost() {
+                fetch('https://httpbin.org/post', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'test', value: 42})
+                })
+                .then(function(r) { return r.text(); })
+                .then(function(t) {
+                    document.getElementById('net-result').textContent = 'post ok: ' + t.substring(0, 50);
+                })
+                .catch(function(e) {
+                    document.getElementById('net-result').textContent = 'post error: ' + e;
+                });
+            }
+        </script>
     </body>
 </html>

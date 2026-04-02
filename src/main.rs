@@ -11,6 +11,7 @@
 //! installed browsers, and auto-downloads the matching WebDriver binary,
 //! caching results in `.browsectl/setup.json`.
 
+mod agent;
 mod batch;
 mod commands;
 mod driver;

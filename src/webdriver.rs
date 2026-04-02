@@ -373,6 +373,77 @@ return null;
         .await
     }
 
+    // ── Chrome DevTools Protocol (CDP) ────────────────────────────────
+
+    /// Execute a CDP command via the Chrome-specific WebDriver extension.
+    ///
+    /// This uses the `/goog/cdp/execute` endpoint supported by chromedriver.
+    /// For Edge, the equivalent `/ms/cdp/execute` endpoint is tried as a
+    /// fallback.
+    ///
+    /// Returns the CDP result or an error if the command fails.
+    pub async fn cdp_execute(&self, cmd: &str, params: Value) -> Result<Value> {
+        let body = json!({ "cmd": cmd, "params": params });
+
+        // Try Chrome endpoint first, then Edge endpoint.
+        let chrome_url = format!("{}/goog/cdp/execute", self.session_url());
+        let resp = self.http.post(&chrome_url).json(&body).send().await;
+
+        match resp {
+            Ok(r) if r.status().is_success() => {
+                return self.parse_response(r).await;
+            }
+            Ok(r) => {
+                // If Chrome endpoint returned an error, try Edge endpoint
+                let error_data: Value = r.json().await.unwrap_or(Value::Null);
+                let error_msg = error_data["value"]["message"].as_str().unwrap_or("");
+
+                // If it's a "unknown command" error, try the Edge endpoint
+                if error_msg.contains("unknown command") || error_msg.contains("unrecognized") {
+                    let edge_url = format!("{}/ms/cdp/execute", self.session_url());
+                    let resp2 = self.http.post(&edge_url).json(&body).send().await?;
+                    return self.parse_response(resp2).await;
+                }
+
+                bail!("CDP command {cmd} failed: {}", error_data);
+            }
+            Err(e) => {
+                // Network error on Chrome endpoint — try Edge
+                let edge_url = format!("{}/ms/cdp/execute", self.session_url());
+                match self.http.post(&edge_url).json(&body).send().await {
+                    Ok(r2) => return self.parse_response(r2).await,
+                    Err(_) => return Err(e.into()),
+                }
+            }
+        }
+    }
+
+    /// Send a CDP command and ignore errors (best-effort).
+    pub async fn cdp_execute_quiet(&self, cmd: &str, params: Value) -> Value {
+        self.cdp_execute(cmd, params).await.unwrap_or(Value::Null)
+    }
+
+    // ── WebDriver logging ─────────────────────────────────────────────
+
+    /// Retrieve available log types from the WebDriver server.
+    pub async fn get_log_types(&self) -> Result<Vec<String>> {
+        let val = self.get_value("/se/log/types").await?;
+        Ok(val
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect())
+    }
+
+    /// Retrieve log entries of the specified type.
+    ///
+    /// Each call drains the buffer — entries are returned only once.
+    pub async fn get_log(&self, log_type: &str) -> Result<Value> {
+        self.post_value("/se/log", &json!({ "type": log_type }))
+            .await
+    }
+
     // ── session lifecycle ──────────────────────────────────────────────
 
     /// Explicitly delete (quit) the session.
